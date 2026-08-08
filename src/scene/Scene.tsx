@@ -16,7 +16,10 @@ export function Scene() {
   return (
     <Canvas
       shadows
-      camera={{ position: [3.4, 2.4, 4.6], fov: 45, near: 0.1, far: 100 }}
+      /* Cámara alta: con poca elevación, la pared frontal de la caja tapa el
+         mecanismo entero. A ~45° se ve el interior sin perder la sensación de
+         estar posado en el fondo */
+      camera={{ position: [2.6, 4.2, 3.4], fov: 45, near: 0.1, far: 100 }}
       gl={{ antialias: true }}
       onCreated={({ gl, scene }) => {
         gl.toneMapping = THREE.ACESFilmicToneMapping

@@ -70,6 +70,22 @@ por SSH). Rama principal `main`.
   queda en `metalness` ~0.52 y no más.
 - Verificar siempre con captura antes de dar algo por bueno: `tsc` y el build
   pasan igual de limpios con la caja renderizándose en negro.
+- **No usar uniforms propios con `onBeforeCompile`.** three llama al hook
+  varias veces por material y reutiliza programas según su cache key; por ese
+  camino la tabla de uniforms que acaba usando el render deja de ser la que
+  uno tiene en la mano (medido: objeto local a 1.0, uniform del material a 0).
+  El control se transporta en `opacity`, que three sube siempre. Ver la
+  explicación larga en `src/lib/xray.ts`.
 
-Pendiente para Fase 2: `src/lib/gears.ts` está sin crear. El interior de la
-caja ya está disponible para alojar los engranajes.
+**Fase 2 completada.** Tren de 4 engranajes con dientes reales
+(`ExtrudeGeometry` de un perfil trapezoidal) dentro de la caja, manivela
+sobre el eje de la rueda motriz, slider y modo rayos-X con realce Fresnel.
+La lógica de ratios vive en `src/lib/gears.ts`, sin dependencias de three, y
+tiene 14 tests (`npm test`, vitest) que cubren los signos de giro, las
+distancias entre centros y que el tren quepa dentro de la caja.
+
+Pendiente para Fase 3: el tren es una cadena simple, así que sus ruedas
+intermedias son «locas» y no multiplican el ratio. Para los ciclos reales
+(saros 223:64, metónico 235:19, ya documentados en `HISTORIC_RATIOS`) hacen
+falta ejes compuestos: dos ruedas de distinto tamaño solidarias sobre un
+mismo eje.

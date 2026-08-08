@@ -10,7 +10,9 @@ import {
 } from '../lib/boxLayout'
 import { PALETTE } from '../lib/palette'
 import { useMechanismStore } from '../lib/useMechanismStore'
+import { enableXray } from '../lib/xray'
 import { BronzePlate } from './BronzePlate'
+import { GearTrain } from './GearTrain'
 import { Grime } from './Grime'
 
 const woodColor = new THREE.Color(PALETTE.wood)
@@ -76,6 +78,12 @@ export function MechanismBox() {
     })
   }, [])
 
+  /** La madera también se desmaterializa en modo rayos-X, o no se vería nada */
+  const xray = useMemo(
+    () => enableXray(wood, { coreOpacity: 0.08, edgeOpacity: 0.5, glow: 1.1 }),
+    [wood],
+  )
+
   useEffect(
     () => () => {
       wood.map?.dispose()
@@ -87,7 +95,9 @@ export function MechanismBox() {
   )
 
   useFrame((_, delta) => {
-    const { cleanLevel, lidOpen } = useMechanismStore.getState()
+    const { cleanLevel, lidOpen, xrayMode } = useMechanismStore.getState()
+
+    xray.set(THREE.MathUtils.damp(xray.get(), xrayMode ? 1 : 0, 5, delta))
 
     // Bisagra: la tapa persigue su ángulo objetivo en vez de saltar a él
     if (hingeRef.current) {
@@ -199,6 +209,9 @@ export function MechanismBox() {
         {/* Concreción sobre las caras del cuerpo */}
         <Grime surface="body" />
       </group>
+
+      {/* El mecanismo, dentro de la caja */}
+      <GearTrain />
 
       {/* --- Tapa abisagrada ---
           El grupo se sitúa en el eje de la bisagra (borde trasero superior);

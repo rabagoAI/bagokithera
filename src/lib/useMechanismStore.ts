@@ -5,16 +5,25 @@ export const CLEAN_STEPS = 4
 
 export type MechanismPhase = 'dirty' | 'clean' | 'open'
 
+/** Vueltas de manivela que abarca el slider de punta a punta */
+export const CRANK_RANGE_TURNS = 6
+
 interface MechanismState {
   /** Progreso de limpieza, de 0 (cubierto de concreción) a 1 (bronce a la vista) */
   cleanLevel: number
   /** Tapa abierta sobre su bisagra */
   lidOpen: boolean
+  /** Giro acumulado de la manivela, en radianes. Mueve todo el tren */
+  crankAngle: number
+  /** Modo radiografía: la caja se vuelve translúcida y se ve el mecanismo */
+  xrayMode: boolean
 
   /** Retira una tanda de concreción (1 / CLEAN_STEPS del total) */
   clean: () => void
   /** Abre la tapa. Sin efecto si la caja todavía está sucia */
   openLid: () => void
+  setCrankAngle: (angle: number) => void
+  toggleXray: () => void
   /** Vuelve al estado inicial (útil para depurar la escena) */
   reset: () => void
 }
@@ -22,6 +31,8 @@ interface MechanismState {
 export const useMechanismStore = create<MechanismState>((set) => ({
   cleanLevel: 0,
   lidOpen: false,
+  crankAngle: 0,
+  xrayMode: false,
 
   clean: () =>
     set((state) => ({
@@ -31,7 +42,12 @@ export const useMechanismStore = create<MechanismState>((set) => ({
   openLid: () =>
     set((state) => (state.cleanLevel >= 1 ? { lidOpen: true } : state)),
 
-  reset: () => set({ cleanLevel: 0, lidOpen: false }),
+  setCrankAngle: (crankAngle) => set({ crankAngle }),
+
+  toggleXray: () => set((state) => ({ xrayMode: !state.xrayMode })),
+
+  reset: () =>
+    set({ cleanLevel: 0, lidOpen: false, crankAngle: 0, xrayMode: false }),
 }))
 
 /**

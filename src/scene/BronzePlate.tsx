@@ -5,6 +5,7 @@ import { PLATE_HEIGHT, PLATE_RADIUS } from '../lib/boxLayout'
 import { PALETTE } from '../lib/palette'
 import { getPatinaTextures } from '../lib/textures'
 import { useMechanismStore } from '../lib/useMechanismStore'
+import { enableXray } from '../lib/xray'
 
 // Instancias reutilizadas en el bucle de render, para no crear un Color por frame
 const patinaColor = new THREE.Color(PALETTE.bronzePatina)
@@ -33,10 +34,16 @@ export function BronzePlate() {
     })
   }, [])
 
+  /** La placa también se radiografía, o quedaría flotando opaca sobre una
+      caja translúcida */
+  const xray = useMemo(() => enableXray(material), [material])
+
   useEffect(() => () => material.dispose(), [material])
 
   useFrame((_, delta) => {
-    const { cleanLevel } = useMechanismStore.getState()
+    const { cleanLevel, xrayMode } = useMechanismStore.getState()
+
+    xray.set(THREE.MathUtils.damp(xray.get(), xrayMode ? 1 : 0, 5, delta))
 
     // El color persigue al objetivo con amortiguación, así el cambio entre
     // clicks es un fundido y no un salto brusco

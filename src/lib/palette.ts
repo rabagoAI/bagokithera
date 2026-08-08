@@ -26,6 +26,8 @@ export const PALETTE = {
   bronzePatina: '#4e7a63',
   /** Bronce recuperado tras la limpieza */
   bronzeClean: '#b08d4f',
+  /** Bronce del mecanismo interno: más saturado, para despegarlo de la madera */
+  bronzeDeep: '#8a6a33',
   /** Concreción marina: coral, sedimento y conchas calcificadas */
   grime: '#6b7a63',
   /** Luz cenital que se filtra desde la superficie */
