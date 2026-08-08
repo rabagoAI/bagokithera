@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+/* Paleta del pecio: la reutilizamos desde Tailwind (bg-abyss, text-bronze...)
+   y desde los materiales 3D vía los tokens de src/lib/palette.ts */
+@theme {
+  --color-abyss: #05141f;
+  --color-deep: #0a2a3d;
+  --color-silt: #93aaa2;
+  --color-bronze: #b08d4f;
+  --color-patina: #4e7a63;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background-color: var(--color-abyss);
+  overflow: hidden;
+}
+
+/* El canvas ocupa todo el viewport; la UI va superpuesta encima */
+canvas {
+  display: block;
+  touch-action: none;
+}
