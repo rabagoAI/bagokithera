@@ -53,10 +53,23 @@ veta y nudos, pátina del bronce, arena del fondo, concreción), todas dibujadas
 con canvas 2D y con sus mapas de rugosidad/normales derivados del mismo campo
 de altura. Iluminación y niebla recalibradas para que el relieve se aprecie.
 
-Ojo con los tintes de `palette.ts`: los colores de material **multiplican** al
-mapa de color, así que van claros. Con tonos oscuros el producto de ambos
-dejaba la caja completamente negra.
+Tercera pasada: el cuerpo es ahora hueco (cuatro paredes y un fondo, con
+`BOX.wallThickness`) y la placa de bronce vive en la cara frontal, donde sigue
+visible con la tapa abierta. Añadido un mapa de entorno procedural.
 
-Pendiente para Fase 2: `src/lib/gears.ts` está sin crear; el interior de la
-caja está vacío (se ve el hueco al abrir la tapa); la placa de bronce queda
-fuera de vista al abrir la tapa, porque va montada sobre ella.
+**Fase 1 cerrada.** Repo git inicializado; el trabajo está en `master` más la
+rama `feature/caja-interior-y-placa-frontal`.
+
+### Trampas de materiales, ya pagadas dos veces
+- Los colores de material **multiplican** al mapa de color, así que los tintes
+  de `palette.ts` van claros. Con tonos oscuros el producto dejaba la caja
+  completamente negra.
+- Un material con `metalness` alto **no tiene componente difusa**: sin mapa de
+  entorno se renderiza casi negro, y con él refleja el azul del agua tintado
+  por su color base (dorado + azul = verde oliva). Por eso el bronce limpio se
+  queda en `metalness` ~0.52 y no más.
+- Verificar siempre con captura antes de dar algo por bueno: `tsc` y el build
+  pasan igual de limpios con la caja renderizándose en negro.
+
+Pendiente para Fase 2: `src/lib/gears.ts` está sin crear. El interior de la
+caja ya está disponible para alojar los engranajes.
