@@ -57,8 +57,8 @@ Tercera pasada: el cuerpo es ahora hueco (cuatro paredes y un fondo, con
 `BOX.wallThickness`) y la placa de bronce vive en la cara frontal, donde sigue
 visible con la tapa abierta. Añadido un mapa de entorno procedural.
 
-**Fase 1 cerrada.** Repo git inicializado; el trabajo está en `master` más la
-rama `feature/caja-interior-y-placa-frontal`.
+**Fase 1 cerrada.** Repo publicado en `github.com/rabagoAI/bagokithera` (remoto
+por SSH). Rama principal `main`.
 
 ### Trampas de materiales, ya pagadas dos veces
 - Los colores de material **multiplican** al mapa de color, así que los tintes
