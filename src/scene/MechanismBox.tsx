@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import * as THREE from 'three'
 import { getWoodTextures } from '../lib/textures'
@@ -6,7 +6,7 @@ import {
   BOX,
   HINGE_POSITION,
   LID_OPEN_ANGLE,
-  PLATE_HEIGHT,
+  PLATE_POSITION,
 } from '../lib/boxLayout'
 import { PALETTE } from '../lib/palette'
 import { useMechanismStore } from '../lib/useMechanismStore'
@@ -17,30 +17,20 @@ const woodColor = new THREE.Color(PALETTE.wood)
 const woodCleanColor = new THREE.Color(PALETTE.woodClean)
 const targetColor = new THREE.Color()
 
-/**
- * Clona los mapas de madera con un repeat propio. Cada pieza necesita el suyo
- * porque el BoxGeometry da UV 0-1 a todas las caras sin tener en cuenta sus
- * proporciones: sin esto, la veta saldría estirada en las caras alargadas.
- */
-function useWoodMaps(repeatX: number, repeatY: number) {
-  return useMemo(() => {
-    const source = getWoodTextures()
-    const map = source.map.clone()
-    const roughnessMap = source.roughnessMap!.clone()
-    const normalMap = source.normalMap!.clone()
-
-    for (const texture of [map, roughnessMap, normalMap]) {
-      texture.repeat.set(repeatX, repeatY)
-      texture.needsUpdate = true
-    }
-
-    return { map, roughnessMap, normalMap }
-  }, [repeatX, repeatY])
-}
+/** Alto libre de las paredes, por encima del fondo de la caja */
+const WALL_HEIGHT = BOX.bodyHeight - BOX.wallThickness
+/** Centro vertical de las paredes */
+const WALL_CENTER_Y = BOX.wallThickness + WALL_HEIGHT / 2
+/** Fondo de las paredes laterales, ya descontadas la frontal y la trasera */
+const SIDE_DEPTH = BOX.depth - BOX.wallThickness * 2
 
 /**
- * La caja del mecanismo: cuerpo de madera + tapa abisagrada con la placa
- * de bronce encima.
+ * La caja del mecanismo: cuerpo hueco de madera con la placa de bronce en su
+ * cara frontal, y tapa abisagrada por el borde trasero.
+ *
+ * El cuerpo son cuatro paredes y un fondo, no un bloque macizo: al abrir la
+ * tapa hay que ver un interior de verdad, y en la Fase 2 los engranajes van
+ * dentro.
  *
  * Interacción:
  * - Mientras queda concreción, cualquier click sobre la caja limpia una tanda.
@@ -48,7 +38,6 @@ function useWoodMaps(repeatX: number, repeatY: number) {
  */
 export function MechanismBox() {
   const hingeRef = useRef<THREE.Group>(null)
-  const woodRef = useRef<THREE.MeshStandardMaterial>(null)
   // El hover va en un ref, no en estado: un re-render de React reaplicaría las
   // props declarativas sobre los materiales que estamos animando por useFrame
   const hovered = useRef(false)
@@ -56,9 +45,46 @@ export function MechanismBox() {
   const clean = useMechanismStore((s) => s.clean)
   const openLid = useMechanismStore((s) => s.openLid)
 
-  // Cuerpo y tapa comparten mapas: sus caras grandes miden lo mismo (2.0 x 1.2),
-  // así que la veta mantiene la escala entre ambas piezas
-  const wood = useWoodMaps(2, 1)
+  /**
+   * Un único material de madera para las seis piezas (cinco del cuerpo más la
+   * tapa). Compartirlo mantiene la limpieza sincronizada en todas ellas y
+   * ahorra media docena de materiales equivalentes.
+   */
+  const wood = useMemo(() => {
+    const source = getWoodTextures()
+    const map = source.map.clone()
+    const roughnessMap = source.roughnessMap!.clone()
+    const normalMap = source.normalMap!.clone()
+
+    // Sin repetir: la textura lleva dos nudos dibujados y con repeat 2 salían
+    // cuatro por cara, idénticos y en retícula, delatando el tileado
+    for (const texture of [map, roughnessMap, normalMap]) {
+      texture.repeat.set(1, 1)
+      texture.needsUpdate = true
+    }
+
+    return new THREE.MeshStandardMaterial({
+      map,
+      roughnessMap,
+      normalMap,
+      normalScale: new THREE.Vector2(1.1, 1.1),
+      color: woodColor.clone(),
+      roughness: 0.95,
+      metalness: 0.05,
+      emissive: new THREE.Color(PALETTE.woodGlow),
+      emissiveIntensity: 0,
+    })
+  }, [])
+
+  useEffect(
+    () => () => {
+      wood.map?.dispose()
+      wood.roughnessMap?.dispose()
+      wood.normalMap?.dispose()
+      wood.dispose()
+    },
+    [wood],
+  )
 
   useFrame((_, delta) => {
     const { cleanLevel, lidOpen } = useMechanismStore.getState()
@@ -76,17 +102,15 @@ export function MechanismBox() {
 
     // La madera también gana algo de tono al retirar el sedimento, y se
     // realza levemente cuando el puntero está encima
-    if (woodRef.current) {
-      targetColor.copy(woodColor).lerp(woodCleanColor, cleanLevel)
-      woodRef.current.color.lerp(targetColor, 1 - Math.exp(-4 * delta))
+    targetColor.copy(woodColor).lerp(woodCleanColor, cleanLevel)
+    wood.color.lerp(targetColor, 1 - Math.exp(-4 * delta))
 
-      woodRef.current.emissiveIntensity = THREE.MathUtils.damp(
-        woodRef.current.emissiveIntensity,
-        hovered.current ? 0.16 : 0,
-        8,
-        delta,
-      )
-    }
+    wood.emissiveIntensity = THREE.MathUtils.damp(
+      wood.emissiveIntensity,
+      hovered.current ? 0.16 : 0,
+      8,
+      delta,
+    )
   })
 
   /** Click sobre el cuerpo: solo sirve para limpiar */
@@ -118,27 +142,59 @@ export function MechanismBox() {
   }
 
   return (
-    <group
-      onPointerOver={handlePointerOver}
-      onPointerOut={handlePointerOut}
-    >
-      {/* --- Cuerpo de madera ---
-          El onClick va en el grupo, no en el mesh: así los clicks sobre las
-          manchas de concreción burbujean hasta aquí y también limpian */}
+    <group onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
+      {/* --- Cuerpo hueco ---
+          El onClick va en el grupo, no en cada mesh: así los clicks sobre las
+          paredes y sobre las manchas de concreción burbujean todos hasta aquí */}
       <group onClick={handleBodyClick}>
-        <mesh position={[0, BOX.bodyHeight / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[BOX.width, BOX.bodyHeight, BOX.depth]} />
-          <meshStandardMaterial
-            ref={woodRef}
-            {...wood}
-            normalScale={new THREE.Vector2(1.1, 1.1)}
-            color={PALETTE.wood}
-            roughness={0.95}
-            metalness={0.05}
-            emissive={PALETTE.woodGlow}
-            emissiveIntensity={0}
-          />
+        {/* Fondo */}
+        <mesh position={[0, BOX.wallThickness / 2, 0]} material={wood} castShadow receiveShadow>
+          <boxGeometry args={[BOX.width, BOX.wallThickness, BOX.depth]} />
         </mesh>
+
+        {/* Pared trasera */}
+        <mesh
+          position={[0, WALL_CENTER_Y, -BOX.depth / 2 + BOX.wallThickness / 2]}
+          material={wood}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[BOX.width, WALL_HEIGHT, BOX.wallThickness]} />
+        </mesh>
+
+        {/* Pared frontal: es la que sostiene la placa de bronce */}
+        <mesh
+          position={[0, WALL_CENTER_Y, BOX.depth / 2 - BOX.wallThickness / 2]}
+          material={wood}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[BOX.width, WALL_HEIGHT, BOX.wallThickness]} />
+        </mesh>
+
+        {/* Paredes laterales, encajadas entre las dos anteriores */}
+        <mesh
+          position={[-BOX.width / 2 + BOX.wallThickness / 2, WALL_CENTER_Y, 0]}
+          material={wood}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[BOX.wallThickness, WALL_HEIGHT, SIDE_DEPTH]} />
+        </mesh>
+        <mesh
+          position={[BOX.width / 2 - BOX.wallThickness / 2, WALL_CENTER_Y, 0]}
+          material={wood}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[BOX.wallThickness, WALL_HEIGHT, SIDE_DEPTH]} />
+        </mesh>
+
+        {/* Placa de bronce, apoyada en la cara frontal. El cilindro nace con
+            su eje en Y, así que lo tumbamos para que mire hacia +Z */}
+        <group position={PLATE_POSITION} rotation={[Math.PI / 2, 0, 0]}>
+          <BronzePlate />
+        </group>
 
         {/* Concreción sobre las caras del cuerpo */}
         <Grime surface="body" />
@@ -150,23 +206,12 @@ export function MechanismBox() {
       <group ref={hingeRef} position={HINGE_POSITION} onClick={handleLidClick}>
         <mesh
           position={[0, BOX.lidHeight / 2, BOX.depth / 2]}
+          material={wood}
           castShadow
           receiveShadow
         >
           <boxGeometry args={[BOX.width, BOX.lidHeight, BOX.depth]} />
-          <meshStandardMaterial
-            {...wood}
-            normalScale={new THREE.Vector2(1.1, 1.1)}
-            color={PALETTE.wood}
-            roughness={0.95}
-            metalness={0.05}
-          />
         </mesh>
-
-        {/* Placa de bronce, centrada sobre la tapa y solidaria con ella */}
-        <group position={[0, BOX.lidHeight + PLATE_HEIGHT / 2, BOX.depth / 2]}>
-          <BronzePlate />
-        </group>
 
         {/* Concreción sobre la tapa */}
         <Grime surface="lid" />

@@ -12,6 +12,12 @@ export const BOX = {
   depth: 1.2,
   /** Grosor de la tapa */
   lidHeight: 0.14,
+  /**
+   * Grosor de las paredes. El cuerpo se construye con cuatro paredes y un
+   * fondo en vez de con un bloque macizo: al abrir la tapa se veía el
+   * interior relleno, y en la Fase 2 los engranajes tienen que caber dentro.
+   */
+  wallThickness: 0.09,
 } as const
 
 /** Altura total con la tapa cerrada */
@@ -27,9 +33,21 @@ export const HINGE_POSITION: [number, number, number] = [0, BOX.bodyHeight, -BOX
 /** Ángulo de apertura de la tapa, en radianes (unos 115°) */
 export const LID_OPEN_ANGLE = -Math.PI * 0.64
 
-/** Radio de la placa circular de bronce montada sobre la tapa */
-export const PLATE_RADIUS = 0.42
+/**
+ * Placa circular de bronce. Va en la cara frontal del cuerpo, no sobre la
+ * tapa: montada arriba desaparecía de la vista justo al abrirla, y en la
+ * Fase 2 es donde van las escalas grabadas y los punteros, que deben quedar
+ * visibles con la caja abierta. Además es su sitio en el mecanismo real.
+ */
+export const PLATE_RADIUS = 0.36
 export const PLATE_HEIGHT = 0.07
+
+/** Centro de la placa, en la cara +Z del cuerpo */
+export const PLATE_POSITION: [number, number, number] = [
+  0,
+  BOX.bodyHeight * 0.5,
+  BOX.depth / 2 + PLATE_HEIGHT / 2,
+]
 
 /**
  * Posición de la luz cenital. Vive aquí, y no dentro de Scene, porque el haz

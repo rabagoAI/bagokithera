@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { createRandom, randomRange } from '../lib/random'
-import { BOX, PLATE_RADIUS } from '../lib/boxLayout'
+import { BOX } from '../lib/boxLayout'
 import { PALETTE } from '../lib/palette'
 import { getConcretionTextures } from '../lib/textures'
 import { useMechanismStore } from '../lib/useMechanismStore'
@@ -82,11 +82,7 @@ function createBlobs(surface: GrimeSurface): Blob[] {
       const x = randomRange(rng, -BOX.width / 2 + 0.1, BOX.width / 2 - 0.1)
       const z = randomRange(rng, 0.12, BOX.depth - 0.12)
 
-      // Las manchas que caen sobre la placa de bronce se apoyan más alto
-      const overPlate = Math.hypot(x, z - BOX.depth / 2) < PLATE_RADIUS
-      const y = overPlate ? BOX.lidHeight + 0.06 : BOX.lidHeight
-
-      position = [x, y, z]
+      position = [x, BOX.lidHeight, z]
       scale = [radius, radius * randomRange(rng, 0.3, 0.5), radius * 0.85]
       rotation = [randomRange(rng, -0.3, 0.3), randomRange(rng, 0, Math.PI), 0]
     }

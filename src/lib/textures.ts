@@ -171,7 +171,7 @@ function buildWood(): MaterialTextures {
       // Las vetas corren en horizontal y ondulan según el ruido de deformación.
       // Frecuencia contenida: con muchos anillos por cara, la madera se leía
       // como un tejido rayado en vez de como tabla
-      let grain = v * 11 + (warp[i] - 0.5) * 5
+      let grain = v * 11 + (warp[i] - 0.5) * 2.4
 
       // Cerca de un nudo las vetas se cierran en anillos a su alrededor
       for (const knot of knots) {
@@ -263,14 +263,16 @@ function buildPatina(): MaterialTextures {
     const speck = fine[i]
 
     // Blanco = el material se ve tal cual; oscuro = zona picada y apagada
-    const value = 0.55 + (1 - crust) * 0.4 + (speck - 0.5) * 0.22
+    const value = 0.72 + (1 - crust) * 0.28 + (speck - 0.5) * 0.18
     const v = Math.max(0, Math.min(1, value))
 
-    // Un punto de verde extra en la costra, para que no sea solo luminancia
+    // Neutro a propósito: el verde de la pátina lo pone el color del material,
+    // que interpola a dorado al limpiar. Con el verde horneado aquí, el bronce
+    // limpio seguía saliendo oliva por mucho que se frotara
     const p = i * 4
-    image.data[p] = v * 236
+    image.data[p] = v * 255
     image.data[p + 1] = v * 255
-    image.data[p + 2] = v * 226
+    image.data[p + 2] = v * 255
     image.data[p + 3] = 255
 
     height[i] = crust * 0.8 + speck * 0.2
@@ -380,6 +382,48 @@ function buildConcretion(): MaterialTextures {
 }
 
 // ---------------------------------------------------------------------------
+// Entorno
+// ---------------------------------------------------------------------------
+
+/**
+ * Mapa de entorno equirectangular: un degradado del azul claro de la
+ * superficie al azul profundo del fondo, con el disco del sol difuminado.
+ *
+ * No es decorativo. El bronce limpio sube su metalness, y un material
+ * metálico sin entorno que reflejar se renderiza casi negro: sin esto, la
+ * placa quedaba apagada justo después de limpiarla.
+ */
+function buildEnvironment(): THREE.Texture {
+  const width = 512
+  const height = 256
+  const { canvas, ctx } = makeCanvas(width)
+  canvas.height = height
+
+  // Columna de agua: claro arriba, abisal abajo
+  const gradient = ctx.createLinearGradient(0, 0, 0, height)
+  gradient.addColorStop(0, '#9fd0ea')
+  gradient.addColorStop(0.42, '#2d6f92')
+  gradient.addColorStop(0.62, '#123c53')
+  gradient.addColorStop(1, '#050f18')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, width, height)
+
+  // Sol difuso cerca del cénit, desenfocado por el oleaje
+  const sun = ctx.createRadialGradient(width * 0.62, height * 0.12, 0, width * 0.62, height * 0.12, height * 0.42)
+  sun.addColorStop(0, 'rgba(255, 252, 235, 0.95)')
+  sun.addColorStop(0.35, 'rgba(190, 226, 240, 0.45)')
+  sun.addColorStop(1, 'rgba(160, 200, 220, 0)')
+  ctx.fillStyle = sun
+  ctx.fillRect(0, 0, width, height)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.mapping = THREE.EquirectangularReflectionMapping
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.needsUpdate = true
+  return texture
+}
+
+// ---------------------------------------------------------------------------
 // Caché
 // ---------------------------------------------------------------------------
 
@@ -397,3 +441,4 @@ export const getWoodTextures = once(buildWood)
 export const getPatinaTextures = once(buildPatina)
 export const getSandTextures = once(buildSand)
 export const getConcretionTextures = once(buildConcretion)
+export const getEnvironmentTexture = once(buildEnvironment)

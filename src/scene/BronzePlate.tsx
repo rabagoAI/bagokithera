@@ -43,9 +43,12 @@ export function BronzePlate() {
     targetColor.copy(patinaColor).lerp(cleanColor, cleanLevel)
     material.color.lerp(targetColor, 1 - Math.exp(-4 * delta))
 
-    // El bronce limpio refleja más y es menos rugoso que la pátina
-    material.roughness = THREE.MathUtils.damp(material.roughness, 0.85 - cleanLevel * 0.32, 4, delta)
-    material.metalness = THREE.MathUtils.damp(material.metalness, 0.4 + cleanLevel * 0.35, 4, delta)
+    // El bronce limpio refleja más y es menos rugoso que la pátina.
+    // El metalness se queda deliberadamente en medio: por encima de ~0.6 la
+    // componente difusa desaparece y la placa solo refleja el azul del agua,
+    // que multiplicado por el dorado del bronce la dejaba verde oliva
+    material.roughness = THREE.MathUtils.damp(material.roughness, 0.85 - cleanLevel * 0.35, 4, delta)
+    material.metalness = THREE.MathUtils.damp(material.metalness, 0.28 + cleanLevel * 0.24, 4, delta)
 
     // Al retirar la costra la superficie se alisa: bajamos el relieve
     const normalTarget = 0.8 - cleanLevel * 0.5

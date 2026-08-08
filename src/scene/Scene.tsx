@@ -2,6 +2,7 @@ import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { PALETTE } from '../lib/palette'
+import { getEnvironmentTexture } from '../lib/textures'
 import { BOX, SUN_POSITION } from '../lib/boxLayout'
 import { MechanismBox } from './MechanismBox'
 import { Seabed } from './Seabed'
@@ -22,6 +23,11 @@ export function Scene() {
         gl.toneMappingExposure = 1.15
         // Mismo color que la niebla: así el horizonte se funde sin corte duro
         scene.background = new THREE.Color(PALETTE.deep)
+
+        // Entorno para los reflejos del bronce. Sin él, la placa limpia
+        // (metalness alto) no tiene nada que reflejar y se ve casi negra
+        scene.environment = getEnvironmentTexture()
+        scene.environmentIntensity = 0.55
       }}
     >
       {/* Niebla exponencial. Calibrada para que el fondo marino cercano se
@@ -52,9 +58,10 @@ export function Scene() {
       {/* Relleno frío desde abajo: evita que las caras en sombra queden negras */}
       <hemisphereLight args={['#5d9ec0', '#16241f', 0.85]} />
 
-      {/* Acento rasante desde el lado opuesto: separa la silueta de la caja
-          del fondo y hace legible la veta en las caras que quedan a contraluz */}
-      <pointLight position={[-3.2, 1.8, -2.4]} intensity={7} distance={12} color="#78b4d6" />
+      {/* Acento frontal: separa la silueta del fondo y, sobre todo, ilumina la
+          placa de bronce. Mira hacia +Z, así que con toda la luz viniendo de
+          arriba se quedaba apagada justo después de limpiarla */}
+      <pointLight position={[-2.4, 1.6, 3.4]} intensity={18} distance={14} color="#bcd8e8" />
 
       <SunShaft />
       <Seabed />
